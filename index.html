@@ -256,7 +256,9 @@
 
             let namaGuru = '';
             let tokenValidasi = 'MANUAL-IZIN';
-            let keteranganLengkap = 'Izin';
+            let statusSimpan = 'Hadir';
+            let keteranganSimpan = 'Hadir via Scan QR';
+            let statusTugasSimpan = 'N/A';
 
             isProcessing = true;
 
@@ -280,6 +282,9 @@
                 namaGuru = bagian[1];
                 const tanggalQr = bagian[2];
                 tokenValidasi = bagian[3];
+                statusSimpan = 'Hadir';
+                keteranganSimpan = 'Hadir via Scan QR';
+                statusTugasSimpan = 'N/A';
 
                 if (tanggalQr !== tanggalHariIni) {
                     tampilkanStatus(`QR Code untuk <b>${namaGuru}</b> sudah kedaluwarsa.`, "gagal");
@@ -300,7 +305,9 @@
 
                 tampilkanStatus("Menyimpan data izin...", "sukses");
                 namaGuru = inputNama;
-                keteranganLengkap = `Izin: ${inputKet} (${selectedTugas})`;
+                statusSimpan = 'Izin';
+                keteranganSimpan = inputKet;
+                statusTugasSimpan = selectedTugas;
             }
 
             try {
@@ -322,19 +329,21 @@
                     return;
                 }
 
-                // Simpan ke Supabase
+                // Simpan ke Supabase dengan kolom yang terpisah rapi
                 const { error: insertError } = await supabaseClient
                     .from('presensi_guru')
                     .insert([{
                         nama_guru: namaGuru,
                         tanggal: tanggalHariIni,
                         token_validasi: tokenValidasi,
-                        status: keteranganLengkap
+                        status: statusSimpan,
+                        keterangan: keteranganSimpan,
+                        status_tugas: statusTugasSimpan
                     }]);
 
                 if (insertError) throw insertError;
 
-                tampilkanStatus(`Presensi <b>${namaGuru}</b> (${selectedStatus}) berhasil disimpan!`, "sukses");
+                tampilkanStatus(`Presensi <b>${namaGuru}</b> (${statusSimpan}) berhasil disimpan!`, "sukses");
                 
                 // Reset form
                 document.getElementById('input-teks').value = '';
