@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scanner Presensi Piket</title>
+    <!-- Konfigurasi PWA untuk Install ke HP -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#059669">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Supabase JS Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+
+        @keyframes fadeInScale {
+            0% { opacity: 0; transform: scale(0.9); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+
+        @keyframes slideUp {
+            0% { opacity: 0; transform: translateY(20px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+
+        .animate-splash {
+            animation: fadeInScale 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        .animate-text-up {
+            animation: slideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.2s forwards;
+            opacity: 0;
+        }
+
+        .fade-out-splash {
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.6s ease-in-out, visibility 0.6s ease-in-out;
+        }
+
+        .fade-in-main {
+            animation: fadeInScale 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col items-center justify-center p-4 overflow-hidden">
+
+    <!-- ================= PREMIUM SPLASH SCREEN (OPENING) ================= -->
+    <div id="splash-screen" class="fixed inset-0 bg-slate-950 z-50 flex flex-col items-center justify-center p-6 text-center">
+        <div class="absolute w-72 h-72 bg-emerald-500/15 rounded-full blur-3xl pointer-events-none animate-pulse"></div>
+        <div class="absolute w-72 h-72 bg-teal-500/10 rounded-full blur-3xl pointer-events-none -bottom-10 -right-10"></div>
+
+        <div class="relative z-10 animate-splash mb-6">
+            <div class="relative flex items-center justify-center w-24 h-24 rounded-3xl bg-gradient-to-tr from-emerald-600 via-teal-500 to-cyan-400 p-0.5 shadow-2xl shadow-emerald-900/50">
+                <div class="w-full h-full bg-slate-950 rounded-[22px] flex items-center justify-center">
+                    <i class="fa-solid fa-fingerprint text-4xl text-transparent bg-clip-text bg-gradient-to-tr from-emerald-400 to-teal-300"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="relative z-10 animate-text-up space-y-2 mb-8">
+            <h1 class="text-2xl font-extrabold text-white tracking-tight">Portal Presensi Piket</h1>
+            <p class="text-xs text-slate-400 font-medium">Sistem Pemindai Kehadiran Guru Terpadu</p>
+        </div>
+
+        <div class="relative z-10 animate-text-up px-4 py-2.5 bg-slate-900/80 border border-slate-800/80 rounded-2xl shadow-lg backdrop-blur-md">
+            <div class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+                <p class="text-[11px] font-semibold text-emerald-400 tracking-wide">
+                    Aplikasi ini dibuat oleh Daeng Ashraf, S.Sos
+                </p>
+            </div>
+        </div>
+
+        <div class="absolute bottom-12 w-36 h-1 bg-slate-900 rounded-full overflow-hidden border border-slate-800">
+            <div class="w-full h-full bg-gradient-to-r from-emerald-500 to-teal-400 animate-pulse"></div>
+        </div>
+    </div>
+
+    <!-- ================= KONTEN UTAMA APLIKASI ================= -->
+    <div id="main-content" class="max-w-md w-full bg-slate-900/90 border border-slate-800/80 rounded-3xl shadow-2xl p-6 relative overflow-hidden opacity-0 backdrop-blur-xl">
+        
+        <div class="absolute -top-24 -right-24 w-48 h-48 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="absolute -bottom-24 -left-24 w-48 h-48 bg-teal-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+        <!-- Header Utama -->
+        <div class="text-center mb-5 relative z-10">
+            <div class="inline-flex items-center justify-center bg-gradient-to-tr from-emerald-600 to-teal-400 text-slate-950 w-12 h-12 rounded-2xl mb-2.5 shadow-lg shadow-emerald-900/30">
+                <i class="fa-solid fa-clipboard-user text-xl"></i>
+            </div>
+            <h2 class="text-base font-extrabold text-white tracking-tight">Input Presensi Piket</h2>
+            <p class="text-[11px] text-slate-400 mt-0.5">Catat kehadiran atau izin guru dengan mudah</p>
+            
+            <div class="inline-block mt-2.5 px-3 py-1 bg-slate-800/60 border border-slate-700/50 rounded-full">
+                <p class="text-[9px] font-medium text-slate-400">
+                    Developer: <span class="text-emerald-400 font-semibold">Daeng Ashraf, S.Sos</span>
+                </p>
+            </div>
+        </div>
+
+        <!-- Form Input & Status -->
+        <div class="mb-4 relative z-10 space-y-3">
+            
+            <!-- Pilihan Status Kehadiran -->
+            <div>
+                <label class="block text-[11px] font-semibold text-slate-300 mb-1.5">Pilih Status:</label>
+                <div class="grid grid-cols-2 gap-2">
+                    <button type="button" onclick="setStatusKehadiran('Hadir')" id="btn-hadir" class="py-2.5 px-3 rounded-xl text-xs font-bold border border-emerald-500 bg-emerald-500/20 text-emerald-300 transition-all shadow-sm">
+                        <i class="fa-solid fa-check mr-1"></i> Hadir (Scan)
+                    </button>
+                    <button type="button" onclick="setStatusKehadiran('Izin')" id="btn-izin" class="py-2.5 px-3 rounded-xl text-xs font-semibold border border-slate-800 bg-slate-950 text-slate-400 hover:border-slate-700 transition-all shadow-sm">
+                        <i class="fa-solid fa-info-circle mr-1"></i> Izin / Sakit
+                    </button>
+                </div>
+            </div>
+
+            <!-- FORM MODE HADIR (SCAN BARCODE) -->
+            <div id="form-hadir" class="space-y-3">
+                <div>
+                    <label class="block text-[11px] font-semibold text-slate-300 mb-1.5">Data QR / Teks Absen:</label>
+                    <textarea id="input-teks" rows="3" placeholder="Tempel teks QR di sini (cth: ABSEN-GURU|Nama...)" class="w-full bg-slate-950 border border-slate-800 rounded-2xl p-3 text-xs text-white focus:outline-none focus:border-emerald-500 transition-all resize-none"></textarea>
+                </div>
+            </div>
+
+            <!-- FORM MODE IZIN (MANUAL: NAMA, KETERANGAN, TUGAS) -->
+            <div id="form-izin" class="space-y-3 hidden">
+                <div>
+                    <label class="block text-[11px] font-semibold text-slate-300 mb-1.5">Nama Guru:</label>
+                    <input type="text" id="input-nama-izin" placeholder="Contoh: Budi Santoso, S.Pd" class="w-full bg-slate-950 border border-slate-800 rounded-2xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-sky-500 transition-all">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-semibold text-slate-300 mb-1.5">Keterangan Izin:</label>
+                    <input type="text" id="input-keterangan" placeholder="Contoh: Sakit / Keperluan Keluarga / Dinas" class="w-full bg-slate-950 border border-slate-800 rounded-2xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-sky-500 transition-all">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-semibold text-slate-300 mb-1.5">Status Pemberian Tugas:</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button type="button" onclick="setStatusTugas('Sudah Memberikan Tugas')" id="btn-tugas-sudah" class="py-2 px-2.5 rounded-xl text-[11px] font-bold border border-sky-500 bg-sky-500/20 text-sky-300 transition-all shadow-sm">
+                            <i class="fa-solid fa-circle-check mr-1"></i> Sudah Tugas
+                        </button>
+                        <button type="button" onclick="setStatusTugas('Belum Memberikan Tugas')" id="btn-tugas-belum" class="py-2 px-2.5 rounded-xl text-[11px] font-semibold border border-slate-800 bg-slate-950 text-slate-400 hover:border-slate-700 transition-all shadow-sm">
+                            <i class="fa-solid fa-circle-xmark mr-1"></i> Belum Tugas
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <button onclick="prosesDataInput()" class="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-slate-950 font-extrabold py-3.5 px-4 rounded-2xl text-xs transition-all shadow-lg shadow-emerald-900/20 flex items-center justify-center gap-2 transform active:scale-95 duration-150">
+                <i class="fa-solid fa-paper-plane text-sm"></i> Kirim & Simpan Absen
+            </button>
+        </div>
+
+        <!-- Area Status / Hasil -->
+        <div id="status-box" class="hidden p-3.5 rounded-2xl border text-xs text-center transition-all mb-4 relative z-10"></div>
+
+        <!-- Informasi Footer -->
+        <div class="text-center relative z-10 pt-3 border-t border-slate-800/60">
+            <p class="text-[10px] text-slate-500">SMA PUNYE GAYE &bull; Terhubung ke server SMA</p>
+        </div>
+    </div>
+
+    <script>
+        // Pendaftaran Service Worker untuk PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then((reg) => { console.log('Service Worker berhasil didaftarkan!', reg); })
+                    .catch((err) => { console.log('Pendaftaran Service Worker gagal:', err); });
+            });
+        }
+
+        // Pengaturan Durasi Splash Screen
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                const splash = document.getElementById('splash-screen');
+                const main = document.getElementById('main-content');
+                
+                splash.classList.add('fade-out-splash');
+                main.classList.remove('opacity-0');
+                main.classList.add('fade-in-main');
+            }, 2500);
+        });
+
+        // Konfigurasi Supabase
+        const SUPABASE_URL = 'https://uxutxeclfcvcvdiydmpw.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_UMV1G-z6vj5x0sRKlvZfVA_ap4qZFkA';
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        let selectedStatus = 'Hadir';
+        let selectedTugas = 'Sudah Memberikan Tugas';
+        let isProcessing = false;
+
+        function setStatusKehadiran(status) {
+            selectedStatus = status;
+            
+            const btnHadir = document.getElementById('btn-hadir');
+            const btnIzin = document.getElementById('btn-izin');
+            const formHadir = document.getElementById('form-hadir');
+            const formIzin = document.getElementById('form-izin');
+
+            btnHadir.className = "py-2.5 px-3 rounded-xl text-xs font-semibold border border-slate-800 bg-slate-950 text-slate-400 transition-all shadow-sm";
+            btnIzin.className = "py-2.5 px-3 rounded-xl text-xs font-semibold border border-slate-800 bg-slate-950 text-slate-400 transition-all shadow-sm";
+
+            if (status === 'Hadir') {
+                btnHadir.className = "py-2.5 px-3 rounded-xl text-xs font-bold border border-emerald-500 bg-emerald-500/20 text-emerald-300 transition-all shadow-sm";
+                formHadir.classList.remove('hidden');
+                formIzin.classList.add('hidden');
+            } else if (status === 'Izin') {
+                btnIzin.className = "py-2.5 px-3 rounded-xl text-xs font-bold border border-sky-500 bg-sky-500/20 text-sky-300 transition-all shadow-sm";
+                formHadir.classList.add('hidden');
+                formIzin.classList.remove('hidden');
+            }
+        }
+
+        function setStatusTugas(statusTugas) {
+            selectedTugas = statusTugas;
+
+            const btnSudah = document.getElementById('btn-tugas-sudah');
+            const btnBelum = document.getElementById('btn-tugas-belum');
+
+            btnSudah.className = "py-2 px-2.5 rounded-xl text-[11px] font-semibold border border-slate-800 bg-slate-950 text-slate-400 transition-all shadow-sm";
+            btnBelum.className = "py-2 px-2.5 rounded-xl text-[11px] font-semibold border border-slate-800 bg-slate-950 text-slate-400 transition-all shadow-sm";
+
+            if (statusTugas === 'Sudah Memberikan Tugas') {
+                btnSudah.className = "py-2 px-2.5 rounded-xl text-[11px] font-bold border border-sky-500 bg-sky-500/20 text-sky-300 transition-all shadow-sm";
+            } else {
+                btnBelum.className = "py-2 px-2.5 rounded-xl text-[11px] font-bold border border-rose-500 bg-rose-500/20 text-rose-300 transition-all shadow-sm";
+            }
+        }
+
+        function tampilkanStatus(pesan, tipe = 'sukses') {
+            const box = document.getElementById('status-box');
+            box.classList.remove('hidden', 'bg-emerald-500/15', 'border-emerald-500/40', 'text-emerald-300', 'bg-rose-500/15', 'border-rose-500/40', 'text-rose-300');
+            
+            if (tipe === 'sukses') {
+                box.classList.add('bg-emerald-500/15', 'border-emerald-500/40', 'text-emerald-300');
+                box.innerHTML = `<i class="fa-solid fa-circle-check text-base mb-1 block"></i><span class="font-bold text-xs block mb-0.5">Berhasil!</span>${pesan}`;
+            } else {
+                box.classList.add('bg-rose-500/15', 'border-rose-500/40', 'text-rose-300');
+                box.innerHTML = `<i class="fa-solid fa-circle-xmark text-base mb-1 block"></i><span class="font-bold text-xs block mb-0.5">Gagal!</span>${pesan}`;
+            }
+        }
+
+        async function prosesDataInput() {
+            if (isProcessing) return;
+
+            const t = new Date();
+            const tanggalHariIni = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
+
+            let namaGuru = '';
+            let tokenValidasi = 'MANUAL-IZIN';
+            let keteranganLengkap = 'Izin';
+
+            isProcessing = true;
+
+            if (selectedStatus === 'Hadir') {
+                const teksInput = document.getElementById('input-teks').value.trim();
+                if (!teksInput) {
+                    tampilkanStatus("Kolom teks QR masih kosong.", "gagal");
+                    isProcessing = false;
+                    return;
+                }
+
+                tampilkanStatus("Memproses data kehadiran...", "sukses");
+
+                const bagian = teksInput.split('|');
+                if (bagian.length < 4 || bagian[0] !== 'ABSEN-GURU') {
+                    tampilkanStatus("Format teks QR tidak valid atau salah.", "gagal");
+                    isProcessing = false;
+                    return;
+                }
+
+                namaGuru = bagian[1];
+                const tanggalQr = bagian[2];
+                tokenValidasi = bagian[3];
+
+                if (tanggalQr !== tanggalHariIni) {
+                    tampilkanStatus(`QR Code untuk <b>${namaGuru}</b> sudah kedaluwarsa.`, "gagal");
+                    isProcessing = false;
+                    return;
+                }
+
+            } else {
+                // Mode Izin
+                const inputNama = document.getElementById('input-nama-izin').value.trim();
+                const inputKet = document.getElementById('input-keterangan').value.trim();
+
+                if (!inputNama || !inputKet) {
+                    tampilkanStatus("Nama guru dan keterangan izin wajib diisi.", "gagal");
+                    isProcessing = false;
+                    return;
+                }
+
+                tampilkanStatus("Menyimpan data izin...", "sukses");
+                namaGuru = inputNama;
+                keteranganLengkap = `Izin: ${inputKet} (${selectedTugas})`;
+            }
+
+            try {
+                // Cek apakah guru sudah tercatat hari ini
+                const { data: existingData, error: checkError } = await supabaseClient
+                    .from('presensi_guru')
+                    .select('*')
+                    .eq('nama_guru', namaGuru)
+                    .eq('tanggal', tanggalHariIni);
+
+                if (checkError) throw checkError;
+
+                if (existingData.length > 0) {
+                    tampilkanStatus(`Guru <b>${namaGuru}</b> sudah tercatat sebelumnya pada hari ini.`, "gagal");
+                    setTimeout(() => { 
+                        document.getElementById('status-box').classList.add('hidden');
+                        isProcessing = false; 
+                    }, 3500);
+                    return;
+                }
+
+                // Simpan ke Supabase
+                const { error: insertError } = await supabaseClient
+                    .from('presensi_guru')
+                    .insert([{
+                        nama_guru: namaGuru,
+                        tanggal: tanggalHariIni,
+                        token_validasi: tokenValidasi,
+                        status: keteranganLengkap
+                    }]);
+
+                if (insertError) throw insertError;
+
+                tampilkanStatus(`Presensi <b>${namaGuru}</b> (${selectedStatus}) berhasil disimpan!`, "sukses");
+                
+                // Reset form
+                document.getElementById('input-teks').value = '';
+                document.getElementById('input-nama-izin').value = '';
+                document.getElementById('input-keterangan').value = '';
+
+                setTimeout(() => {
+                    document.getElementById('status-box').classList.add('hidden');
+                    isProcessing = false;
+                }, 3500);
+
+            } catch (err) {
+                tampilkanStatus(`Kesalahan database: ${err.message}`, "gagal");
+                isProcessing = false;
+            }
+        }
+    </script>
+</body>
+</html>
