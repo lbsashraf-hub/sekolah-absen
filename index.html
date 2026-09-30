@@ -96,7 +96,7 @@
                 <i class="fa-solid fa-clipboard-user text-xl"></i>
             </div>
             <h2 class="text-base font-extrabold text-white tracking-tight">Input Presensi Piket</h2>
-            <p class="text-[11px] text-slate-400 mt-0.5">Catat kehadiran atau izin guru dengan mudah</p>
+            <p class="text-[11px] text-slate-400 mt-0.5">Catat kehadiran, izin, atau alfa guru dengan mudah</p>
             
             <div class="inline-block mt-2.5 px-3 py-1 bg-slate-800/60 border border-slate-700/50 rounded-full">
                 <p class="text-[9px] font-medium text-slate-400">
@@ -108,15 +108,18 @@
         <!-- Form Input & Status -->
         <div class="mb-4 relative z-10 space-y-3">
             
-            <!-- Pilihan Status Kehadiran -->
+            <!-- Pilihan Status Kehadiran (Hadir, Izin, Alfa) -->
             <div>
                 <label class="block text-[11px] font-semibold text-slate-300 mb-1.5">Pilih Status:</label>
-                <div class="grid grid-cols-2 gap-2">
-                    <button type="button" onclick="setStatusKehadiran('Hadir')" id="btn-hadir" class="py-2.5 px-3 rounded-xl text-xs font-bold border border-emerald-500 bg-emerald-500/20 text-emerald-300 transition-all shadow-sm">
-                        <i class="fa-solid fa-check mr-1"></i> Hadir (Scan)
+                <div class="grid grid-cols-3 gap-1.5">
+                    <button type="button" onclick="setStatusKehadiran('Hadir')" id="btn-hadir" class="py-2.5 px-2 rounded-xl text-xs font-bold border border-emerald-500 bg-emerald-500/20 text-emerald-300 transition-all shadow-sm">
+                        <i class="fa-solid fa-check mr-1"></i> Hadir
                     </button>
-                    <button type="button" onclick="setStatusKehadiran('Izin')" id="btn-izin" class="py-2.5 px-3 rounded-xl text-xs font-semibold border border-slate-800 bg-slate-950 text-slate-400 hover:border-slate-700 transition-all shadow-sm">
-                        <i class="fa-solid fa-info-circle mr-1"></i> Izin / Sakit
+                    <button type="button" onclick="setStatusKehadiran('Izin')" id="btn-izin" class="py-2.5 px-2 rounded-xl text-xs font-semibold border border-slate-800 bg-slate-950 text-slate-400 hover:border-slate-700 transition-all shadow-sm">
+                        <i class="fa-solid fa-info-circle mr-1"></i> Izin
+                    </button>
+                    <button type="button" onclick="setStatusKehadiran('Alfa')" id="btn-alfa" class="py-2.5 px-2 rounded-xl text-xs font-semibold border border-slate-800 bg-slate-950 text-slate-400 hover:border-slate-700 transition-all shadow-sm">
+                        <i class="fa-solid fa-xmark mr-1"></i> Alfa
                     </button>
                 </div>
             </div>
@@ -149,6 +152,14 @@
                             <i class="fa-solid fa-circle-xmark mr-1"></i> Belum Tugas
                         </button>
                     </div>
+                </div>
+            </div>
+
+            <!-- FORM MODE ALFA (MANUAL: NAMA) -->
+            <div id="form-alfa" class="space-y-3 hidden">
+                <div>
+                    <label class="block text-[11px] font-semibold text-slate-300 mb-1.5">Nama Guru (Alfa):</label>
+                    <input type="text" id="input-nama-alfa" placeholder="Contoh: Ahmad Zaelani, S.Pd" class="w-full bg-slate-950 border border-slate-800 rounded-2xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-rose-500 transition-all">
                 </div>
             </div>
 
@@ -202,20 +213,30 @@
             
             const btnHadir = document.getElementById('btn-hadir');
             const btnIzin = document.getElementById('btn-izin');
+            const btnAlfa = document.getElementById('btn-alfa');
+            
             const formHadir = document.getElementById('form-hadir');
             const formIzin = document.getElementById('form-izin');
+            const formAlfa = document.getElementById('form-alfa');
 
-            btnHadir.className = "py-2.5 px-3 rounded-xl text-xs font-semibold border border-slate-800 bg-slate-950 text-slate-400 transition-all shadow-sm";
-            btnIzin.className = "py-2.5 px-3 rounded-xl text-xs font-semibold border border-slate-800 bg-slate-950 text-slate-400 transition-all shadow-sm";
+            // Reset kelas semua tombol
+            btnHadir.className = "py-2.5 px-2 rounded-xl text-xs font-semibold border border-slate-800 bg-slate-950 text-slate-400 transition-all shadow-sm";
+            btnIzin.className = "py-2.5 px-2 rounded-xl text-xs font-semibold border border-slate-800 bg-slate-950 text-slate-400 transition-all shadow-sm";
+            btnAlfa.className = "py-2.5 px-2 rounded-xl text-xs font-semibold border border-slate-800 bg-slate-950 text-slate-400 transition-all shadow-sm";
+
+            formHadir.classList.add('hidden');
+            formIzin.classList.add('hidden');
+            formAlfa.classList.add('hidden');
 
             if (status === 'Hadir') {
-                btnHadir.className = "py-2.5 px-3 rounded-xl text-xs font-bold border border-emerald-500 bg-emerald-500/20 text-emerald-300 transition-all shadow-sm";
+                btnHadir.className = "py-2.5 px-2 rounded-xl text-xs font-bold border border-emerald-500 bg-emerald-500/20 text-emerald-300 transition-all shadow-sm";
                 formHadir.classList.remove('hidden');
-                formIzin.classList.add('hidden');
             } else if (status === 'Izin') {
-                btnIzin.className = "py-2.5 px-3 rounded-xl text-xs font-bold border border-sky-500 bg-sky-500/20 text-sky-300 transition-all shadow-sm";
-                formHadir.classList.add('hidden');
+                btnIzin.className = "py-2.5 px-2 rounded-xl text-xs font-bold border border-sky-500 bg-sky-500/20 text-sky-300 transition-all shadow-sm";
                 formIzin.classList.remove('hidden');
+            } else if (status === 'Alfa') {
+                btnAlfa.className = "py-2.5 px-2 rounded-xl text-xs font-bold border border-rose-500 bg-rose-500/20 text-rose-300 transition-all shadow-sm";
+                formAlfa.classList.remove('hidden');
             }
         }
 
@@ -255,7 +276,7 @@
             const tanggalHariIni = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
 
             let namaGuru = '';
-            let tokenValidasi = 'MANUAL-IZIN';
+            let tokenValidasi = 'MANUAL-SYSTEM';
             let statusSimpan = 'Hadir';
             let keteranganSimpan = 'Hadir via Scan QR';
             let statusTugasSimpan = 'N/A';
@@ -292,8 +313,7 @@
                     return;
                 }
 
-            } else {
-                // Mode Izin
+            } else if (selectedStatus === 'Izin') {
                 const inputNama = document.getElementById('input-nama-izin').value.trim();
                 const inputKet = document.getElementById('input-keterangan').value.trim();
 
@@ -308,6 +328,23 @@
                 statusSimpan = 'Izin';
                 keteranganSimpan = inputKet;
                 statusTugasSimpan = selectedTugas;
+                tokenValidasi = 'MANUAL-IZIN';
+
+            } else if (selectedStatus === 'Alfa') {
+                const inputNamaAlfa = document.getElementById('input-nama-alfa').value.trim();
+
+                if (!inputNamaAlfa) {
+                    tampilkanStatus("Nama guru yang alfa wajib diisi.", "gagal");
+                    isProcessing = false;
+                    return;
+                }
+
+                tampilkanStatus("Menyimpan data alfa...", "sukses");
+                namaGuru = inputNamaAlfa;
+                statusSimpan = 'Alfa';
+                keteranganSimpan = 'Tanpa Keterangan (Alfa)';
+                statusTugasSimpan = 'Belum Memberikan Tugas';
+                tokenValidasi = 'MANUAL-ALFA';
             }
 
             try {
@@ -329,7 +366,7 @@
                     return;
                 }
 
-                // Simpan ke Supabase dengan kolom yang terpisah rapi
+                // Simpan ke Supabase
                 const { error: insertError } = await supabaseClient
                     .from('presensi_guru')
                     .insert([{
@@ -349,6 +386,7 @@
                 document.getElementById('input-teks').value = '';
                 document.getElementById('input-nama-izin').value = '';
                 document.getElementById('input-keterangan').value = '';
+                document.getElementById('input-nama-alfa').value = '';
 
                 setTimeout(() => {
                     document.getElementById('status-box').classList.add('hidden');
