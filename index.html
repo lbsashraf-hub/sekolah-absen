@@ -74,7 +74,7 @@
             <div class="flex items-center gap-2">
                 <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
                 <p class="text-[11px] font-semibold text-emerald-400 tracking-wide">
-                    Aplikasi ini dibuat oleh Daeng Ashraf, S.Sos
+                    Website ini dibuat oleh Daeng Ashraf, S.Sos
                 </p>
             </div>
         </div>
@@ -108,7 +108,7 @@
         <!-- Form Input & Status -->
         <div class="mb-4 relative z-10 space-y-3">
             
-            <!-- Pilihan Status Kehadiran (Hadir, Izin, Alfa) -->
+            <!-- Pilihan Status Kehadiran -->
             <div>
                 <label class="block text-[11px] font-semibold text-slate-300 mb-1.5">Pilih Status:</label>
                 <div class="grid grid-cols-3 gap-1.5">
@@ -124,15 +124,32 @@
                 </div>
             </div>
 
-            <!-- FORM MODE HADIR (SCAN BARCODE) -->
+            <!-- FORM MODE HADIR -->
             <div id="form-hadir" class="space-y-3">
                 <div>
                     <label class="block text-[11px] font-semibold text-slate-300 mb-1.5">Data QR / Teks Absen:</label>
-                    <textarea id="input-teks" rows="3" placeholder="Tempel teks QR di sini (cth: ABSEN-GURU|Nama...)" class="w-full bg-slate-950 border border-slate-800 rounded-2xl p-3 text-xs text-white focus:outline-none focus:border-emerald-500 transition-all resize-none"></textarea>
+                    <textarea id="input-teks" rows="2" placeholder="Tempel teks QR di sini (cth: ABSEN-GURU|Nama...)" class="w-full bg-slate-950 border border-slate-800 rounded-2xl p-3 text-xs text-white focus:outline-none focus:border-emerald-500 transition-all resize-none"></textarea>
+                </div>
+
+                <!-- Opsi Manual Kelas & Keterangan Telat -->
+                <div class="grid grid-cols-2 gap-2 pt-1">
+                    <div>
+                        <label class="block text-[10px] font-semibold text-slate-400 mb-1">Pilih Kelas (Opsional/Telat):</label>
+                        <select id="select-kelas-manual" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-2 py-2 text-xs text-white focus:outline-none focus:border-emerald-500">
+                            <option value="Otomatis">Ikuti Jadwal Otomatis</option>
+                            <option value="Kelas 10">Kelas 10</option>
+                            <option value="Kelas 11">Kelas 11</option>
+                            <option value="Kelas 12">Kelas 12</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-semibold text-slate-400 mb-1">Catatan Waktu:</label>
+                        <input type="text" id="input-catatan-hadir" placeholder="Cth: Telat 15 mnt" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-2 text-xs text-white focus:outline-none focus:border-emerald-500">
+                    </div>
                 </div>
             </div>
 
-            <!-- FORM MODE IZIN (MANUAL: NAMA, KETERANGAN, TUGAS) -->
+            <!-- FORM MODE IZIN -->
             <div id="form-izin" class="space-y-3 hidden">
                 <div>
                     <label class="block text-[11px] font-semibold text-slate-300 mb-1.5">Nama Guru:</label>
@@ -155,7 +172,7 @@
                 </div>
             </div>
 
-            <!-- FORM MODE ALFA (MANUAL: NAMA) -->
+            <!-- FORM MODE ALFA -->
             <div id="form-alfa" class="space-y-3 hidden">
                 <div>
                     <label class="block text-[11px] font-semibold text-slate-300 mb-1.5">Nama Guru (Alfa):</label>
@@ -208,6 +225,62 @@
         let selectedTugas = 'Sudah Memberikan Tugas';
         let isProcessing = false;
 
+        // Fungsi helper untuk mendapatkan nama hari ini dalam Bahasa Indonesia
+        function getHariIniIndonesia() {
+            const listHari = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+            const sekarang = new Date();
+            return listHari[sekarang.getDay()];
+        }
+
+        // Fungsi pencocokan jadwal menggunakan select('*') agar aman dari error nama kolom
+        async function deteksiKelasDanMapelOtomatis(namaGuru, waktuScan) {
+            const hariIni = getHariIniIndonesia(); // Contoh: "Kamis"
+            const jamMenitScan = waktuScan.substring(0, 5); // Format "HH:mm"
+
+            try {
+                // Mengambil semua kolom dari tabel jadwal_mengajar
+                const { data, error } = await supabaseClient
+                    .from('jadwal_mengajar')
+                    .select('*')
+                    .ilike('nama_guru', `%${namaGuru}%`)
+                    .eq('hari', hariIni);
+
+                if (error) {
+                    console.error("Gagal query jadwal:", error.message);
+                    return { kelas: "Kelas Umum / Piket", mapel: "Kegiatan Umum" };
+                }
+
+                if (data && data.length > 0) {
+                    const jadwalCocok = data.find(j => {
+                        // Mendukung berbagai variasi nama kolom waktu di database Anda
+                        const jamMulaiField = j.jam_mulai || j.jam_masuk || j.mulai || "00:00";
+                        const jamSelesaiField = j.jam_selesai || j.jam_keluar || j.selesai || "23:59";
+
+                        const mulai = String(jamMulaiField).substring(0, 5);
+                        const selesai = String(jamSelesaiField).substring(0, 5);
+
+                        return jamMenitScan >= mulai && jamMenitScan <= selesai;
+                    });
+
+                    if (jadwalCocok) {
+                        // Mendukung berbagai variasi nama kolom kelas dan mapel
+                        const kelasHasil = jadwalCocok.kelas || jadwalCocok.nama_kelas || "Kelas Umum / Piket";
+                        const mapelHasil = jadwalCocok.mapel || jadwalCocok.mata_pelajaran || jadwalCocok.pelajaran || "Kegiatan Umum";
+
+                        return {
+                            kelas: kelasHasil,
+                            mapel: mapelHasil
+                        };
+                    }
+                }
+
+                return { kelas: "Kelas Umum / Piket", mapel: "Kegiatan Umum" };
+            } catch (err) {
+                console.error("Error pengecekan jadwal:", err);
+                return { kelas: "Kelas Umum / Piket", mapel: "Kegiatan Umum" };
+            }
+        }
+
         function setStatusKehadiran(status) {
             selectedStatus = status;
             
@@ -219,7 +292,6 @@
             const formIzin = document.getElementById('form-izin');
             const formAlfa = document.getElementById('form-alfa');
 
-            // Reset kelas semua tombol
             btnHadir.className = "py-2.5 px-2 rounded-xl text-xs font-semibold border border-slate-800 bg-slate-950 text-slate-400 transition-all shadow-sm";
             btnIzin.className = "py-2.5 px-2 rounded-xl text-xs font-semibold border border-slate-800 bg-slate-950 text-slate-400 transition-all shadow-sm";
             btnAlfa.className = "py-2.5 px-2 rounded-xl text-xs font-semibold border border-slate-800 bg-slate-950 text-slate-400 transition-all shadow-sm";
@@ -274,17 +346,23 @@
 
             const t = new Date();
             const tanggalHariIni = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
+            const waktuSekarang = `${String(t.getHours()).padStart(2, '0')}:${String(t.getMinutes()).padStart(2, '0')}:${String(t.getSeconds()).padStart(2, '0')}`;
 
             let namaGuru = '';
             let tokenValidasi = 'MANUAL-SYSTEM';
             let statusSimpan = 'Hadir';
             let keteranganSimpan = 'Hadir via Scan QR';
             let statusTugasSimpan = 'N/A';
+            let kelasSimpan = '-';
+            let mapelSimpan = '-';
 
             isProcessing = true;
 
             if (selectedStatus === 'Hadir') {
                 const teksInput = document.getElementById('input-teks').value.trim();
+                const kelasManual = document.getElementById('select-kelas-manual').value;
+                const catatanHadir = document.getElementById('input-catatan-hadir').value.trim();
+
                 if (!teksInput) {
                     tampilkanStatus("Kolom teks QR masih kosong.", "gagal");
                     isProcessing = false;
@@ -304,7 +382,23 @@
                 const tanggalQr = bagian[2];
                 tokenValidasi = bagian[3];
                 statusSimpan = 'Hadir';
-                keteranganSimpan = 'Hadir via Scan QR';
+                
+                if (kelasManual !== 'Otomatis') {
+                    kelasSimpan = kelasManual;
+                    mapelSimpan = 'Penyesuaian / Guru Pengganti';
+                } else {
+                    const infoJadwal = await deteksiKelasDanMapelOtomatis(namaGuru, waktuSekarang);
+                    kelasSimpan = infoJadwal.kelas;
+                    mapelSimpan = infoJadwal.mapel;
+                }
+
+                let infoTambahan = "";
+                if (mapelSimpan === 'Kegiatan Umum') {
+                    infoTambahan = " [Diluar Jadwal / Guru Piket/Pengganti]";
+                }
+
+                let suffixCatatan = catatanHadir ? ` - Catatan: ${catatanHadir}` : '';
+                keteranganSimpan = `Hadir via Scan QR (${mapelSimpan} - ${kelasSimpan})${infoTambahan}${suffixCatatan} (Pukul ${waktuSekarang})`;
                 statusTugasSimpan = 'N/A';
 
                 if (tanggalQr !== tanggalHariIni) {
@@ -326,9 +420,11 @@
                 tampilkanStatus("Menyimpan data izin...", "sukses");
                 namaGuru = inputNama;
                 statusSimpan = 'Izin';
-                keteranganSimpan = inputKet;
+                keteranganSimpan = `${inputKet} (Pukul ${waktuSekarang})`;
                 statusTugasSimpan = selectedTugas;
                 tokenValidasi = 'MANUAL-IZIN';
+                kelasSimpan = '-';
+                mapelSimpan = '-';
 
             } else if (selectedStatus === 'Alfa') {
                 const inputNamaAlfa = document.getElementById('input-nama-alfa').value.trim();
@@ -342,31 +438,14 @@
                 tampilkanStatus("Menyimpan data alfa...", "sukses");
                 namaGuru = inputNamaAlfa;
                 statusSimpan = 'Alfa';
-                keteranganSimpan = 'Tanpa Keterangan (Alfa)';
+                keteranganSimpan = `Tanpa Keterangan (Alfa) - Dicatat pukul ${waktuSekarang}`;
                 statusTugasSimpan = 'Belum Memberikan Tugas';
                 tokenValidasi = 'MANUAL-ALFA';
+                kelasSimpan = '-';
+                mapelSimpan = '-';
             }
 
             try {
-                // Cek apakah guru sudah tercatat hari ini
-                const { data: existingData, error: checkError } = await supabaseClient
-                    .from('presensi_guru')
-                    .select('*')
-                    .eq('nama_guru', namaGuru)
-                    .eq('tanggal', tanggalHariIni);
-
-                if (checkError) throw checkError;
-
-                if (existingData.length > 0) {
-                    tampilkanStatus(`Guru <b>${namaGuru}</b> sudah tercatat sebelumnya pada hari ini.`, "gagal");
-                    setTimeout(() => { 
-                        document.getElementById('status-box').classList.add('hidden');
-                        isProcessing = false; 
-                    }, 3500);
-                    return;
-                }
-
-                // Simpan ke Supabase
                 const { error: insertError } = await supabaseClient
                     .from('presensi_guru')
                     .insert([{
@@ -375,15 +454,18 @@
                         token_validasi: tokenValidasi,
                         status: statusSimpan,
                         keterangan: keteranganSimpan,
-                        status_tugas: statusTugasSimpan
+                        status_tugas: statusTugasSimpan,
+                        kelas: kelasSimpan,
+                        mapel: mapelSimpan
                     }]);
 
                 if (insertError) throw insertError;
 
-                tampilkanStatus(`Presensi <b>${namaGuru}</b> (${statusSimpan}) berhasil disimpan!`, "sukses");
+                tampilkanStatus(`Presensi <b>${namaGuru}</b> (${statusSimpan} - ${kelasSimpan}) berhasil disimpan!`, "sukses");
                 
-                // Reset form
                 document.getElementById('input-teks').value = '';
+                document.getElementById('select-kelas-manual').value = 'Otomatis';
+                document.getElementById('input-catatan-hadir').value = '';
                 document.getElementById('input-nama-izin').value = '';
                 document.getElementById('input-keterangan').value = '';
                 document.getElementById('input-nama-alfa').value = '';
