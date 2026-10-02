@@ -225,6 +225,9 @@
         let selectedTugas = 'Sudah Memberikan Tugas';
         let isProcessing = false;
 
+        // Daftar nama guru piket
+        const listGuruPiket = ["Hildan", "Nadiv", "Resma"];
+
         // Fungsi helper untuk mendapatkan nama hari ini dalam Bahasa Indonesia
         function getHariIniIndonesia() {
             const listHari = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
@@ -232,13 +235,15 @@
             return listHari[sekarang.getDay()];
         }
 
-        // Fungsi pencocokan jadwal menggunakan select('*') agar aman dari error nama kolom
+        // Fungsi pencocokan jadwal dan deteksi piket otomatis yang telah diperbarui
         async function deteksiKelasDanMapelOtomatis(namaGuru, waktuScan) {
-            const hariIni = getHariIniIndonesia(); // Contoh: "Kamis"
-            const jamMenitScan = waktuScan.substring(0, 5); // Format "HH:mm"
+            const hariIni = getHariIniIndonesia();
+            const jamMenitScan = waktuScan.substring(0, 5);
+
+            // Cek apakah guru termasuk daftar piket
+            const adalahPiket = listGuruPiket.some(piket => namaGuru.toLowerCase().includes(piket.toLowerCase()));
 
             try {
-                // Mengambil semua kolom dari tabel jadwal_mengajar
                 const { data, error } = await supabaseClient
                     .from('jadwal_mengajar')
                     .select('*')
@@ -247,12 +252,14 @@
 
                 if (error) {
                     console.error("Gagal query jadwal:", error.message);
-                    return { kelas: "Kelas Umum / Piket", mapel: "Kegiatan Umum" };
+                    return { 
+                        kelas: adalahPiket ? "Piket Sekolah" : "Kelas Umum", 
+                        mapel: adalahPiket ? "Tugas Piket" : "Kegiatan Umum" 
+                    };
                 }
 
                 if (data && data.length > 0) {
                     const jadwalCocok = data.find(j => {
-                        // Mendukung berbagai variasi nama kolom waktu di database Anda
                         const jamMulaiField = j.jam_mulai || j.jam_masuk || j.mulai || "00:00";
                         const jamSelesaiField = j.jam_selesai || j.jam_keluar || j.selesai || "23:59";
 
@@ -262,22 +269,35 @@
                         return jamMenitScan >= mulai && jamMenitScan <= selesai;
                     });
 
+                    // Jika ditemukan jadwal mengajar pada jam tersebut, ambil kelas dan mapel mengajarnya
                     if (jadwalCocok) {
-                        // Mendukung berbagai variasi nama kolom kelas dan mapel
-                        const kelasHasil = jadwalCocok.kelas || jadwalCocok.nama_kelas || "Kelas Umum / Piket";
-                        const mapelHasil = jadwalCocok.mapel || jadwalCocok.mata_pelajaran || jadwalCocok.pelajaran || "Kegiatan Umum";
-
                         return {
-                            kelas: kelasHasil,
-                            mapel: mapelHasil
+                            kelas: jadwalCocok.kelas || jadwalCocok.nama_kelas || "Kelas Umum",
+                            mapel: jadwalCocok.mapel || jadwalCocok.mata_pelajaran || jadwalCocok.pelajaran || "Mata Pelajaran"
                         };
                     }
                 }
 
-                return { kelas: "Kelas Umum / Piket", mapel: "Kegiatan Umum" };
+                // Jika tidak ada jadwal mengajar, cek apakah dia guru piket
+                if (adalahPiket) {
+                    return { 
+                        kelas: "Piket Sekolah", 
+                        mapel: "Tugas Piket" 
+                    };
+                }
+
+                // Default jika bukan guru piket dan tidak ada jadwal
+                return { 
+                    kelas: "Kelas Umum", 
+                    mapel: "Kegiatan Umum" 
+                };
+
             } catch (err) {
                 console.error("Error pengecekan jadwal:", err);
-                return { kelas: "Kelas Umum / Piket", mapel: "Kegiatan Umum" };
+                return { 
+                    kelas: adalahPiket ? "Piket Sekolah" : "Kelas Umum", 
+                    mapel: adalahPiket ? "Tugas Piket" : "Kegiatan Umum" 
+                };
             }
         }
 
@@ -363,7 +383,7 @@
                 const kelasManual = document.getElementById('select-kelas-manual').value;
                 const catatanHadir = document.getElementById('input-catatan-hadir').value.trim();
 
-                if (!teksInput) {
+            if (!teksInput) {
                     tampilkanStatus("Kolom teks QR masih kosong.", "gagal");
                     isProcessing = false;
                     return;
@@ -393,8 +413,8 @@
                 }
 
                 let infoTambahan = "";
-                if (mapelSimpan === 'Kegiatan Umum') {
-                    infoTambahan = " [Diluar Jadwal / Guru Piket/Pengganti]";
+                if (mapelSimpan === 'Tugas Piket') {
+                    infoTambahan = " [Guru Piket Sekolah]";
                 }
 
                 let suffixCatatan = catatanHadir ? ` - Catatan: ${catatanHadir}` : '';
@@ -445,6 +465,9 @@
                 mapelSimpan = '-';
             }
 
+            // Pengecekan otomatis apakah nama guru termasuk daftar piket
+            const cekPiket = listGuruPiket.some(piket => namaGuru.toLowerCase().includes(piket.toLowerCase()));
+
             try {
                 const { error: insertError } = await supabaseClient
                     .from('presensi_guru')
@@ -456,7 +479,8 @@
                         keterangan: keteranganSimpan,
                         status_tugas: statusTugasSimpan,
                         kelas: kelasSimpan,
-                        mapel: mapelSimpan
+                        mapel: mapelSimpan,
+                        is_piket: cekPiket // Otomatis TRUE jika nama termasuk Hildan, Nadiv, atau Resma
                     }]);
 
                 if (insertError) throw insertError;
