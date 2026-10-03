@@ -485,7 +485,8 @@
 
                 if (insertError) throw insertError;
 
-                tampilkanStatus(`Presensi <b>${namaGuru}</b> (${statusSimpan} - ${kelasSimpan}) berhasil disimpan!`, "sukses");
+                // Memunculkan nama mapel/ekskul beserta kelas pada teks pesan sukses
+                tampilkanStatus(`Presensi <b>${namaGuru}</b> (${statusSimpan} - ${mapelSimpan} - ${kelasSimpan}) berhasil disimpan!`, "sukses");
                 
                 document.getElementById('input-teks').value = '';
                 document.getElementById('select-kelas-manual').value = 'Otomatis';
