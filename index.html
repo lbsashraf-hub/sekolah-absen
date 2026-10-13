@@ -383,7 +383,7 @@
                 const kelasManual = document.getElementById('select-kelas-manual').value;
                 const catatanHadir = document.getElementById('input-catatan-hadir').value.trim();
 
-            if (!teksInput) {
+                if (!teksInput) {
                     tampilkanStatus("Kolom teks QR masih kosong.", "gagal");
                     isProcessing = false;
                     return;
@@ -440,7 +440,10 @@
                 tampilkanStatus("Menyimpan data izin...", "sukses");
                 namaGuru = inputNama;
                 statusSimpan = 'Izin';
-                keteranganSimpan = `${inputKet} (Pukul ${waktuSekarang})`;
+                
+                // PERBAIKAN: Format keterangan izin agar menyertakan Alasan & Status Tugas dengan jelas
+                keteranganSimpan = `Alasan: ${inputKet} | Status Tugas: ${selectedTugas} (Pukul ${waktuSekarang})`;
+                
                 statusTugasSimpan = selectedTugas;
                 tokenValidasi = 'MANUAL-IZIN';
                 kelasSimpan = '-';
