@@ -441,8 +441,8 @@
                 namaGuru = inputNama;
                 statusSimpan = 'Izin';
                 
-                // PERBAIKAN: Format keterangan izin agar menyertakan Alasan & Status Tugas dengan jelas
-                keteranganSimpan = `Alasan: ${inputKet} | Status Tugas: ${selectedTugas} (Pukul ${waktuSekarang})`;
+                // MURNI KETERANGAN ALASAN (misal: "Sakit"), tanpa tambahan label Alasan/Status Tugas
+                keteranganSimpan = inputKet;
                 
                 statusTugasSimpan = selectedTugas;
                 tokenValidasi = 'MANUAL-IZIN';
@@ -461,7 +461,7 @@
                 tampilkanStatus("Menyimpan data alfa...", "sukses");
                 namaGuru = inputNamaAlfa;
                 statusSimpan = 'Alfa';
-                keteranganSimpan = `Tanpa Keterangan (Alfa) - Dicatat pukul ${waktuSekarang}`;
+                keteranganSimpan = `Tanpa Keterangan (Alfa)`;
                 statusTugasSimpan = 'Belum Memberikan Tugas';
                 tokenValidasi = 'MANUAL-ALFA';
                 kelasSimpan = '-';
